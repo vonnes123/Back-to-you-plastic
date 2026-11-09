@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Back to You</title>
+  <meta name="description" content="A scroll story about plastic in Japan, and how it finds its way back into your body." />
+  <script>
+    // Always start the story from the top (runs before the browser can restore an old scroll position)
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.addEventListener('pagehide', function () { window.scrollTo(0, 0); });
+  </script>
+  <link rel="icon" href="data:," />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter+Tight:wght@400;600;800&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script type="importmap">
+    { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <!-- ============ FIXED VISUAL LAYERS (bottom → top) ============ -->
+  <div class="stage" id="stage-bg">
+    <svg id="bg-sea" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet"></svg>
+    <div id="waves-back" class="layer"></div>
+    <svg id="bg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <div id="dim"></div>
+  <canvas id="webgl"></canvas>
+  <div class="stage" id="stage-fg">
+    <div id="water-surface" class="layer"></div>
+    <svg id="fg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <svg id="hud"></svg>
+  <div id="xboard"><div class="xb-inner" id="xb-inner"></div></div>
+  <div id="flash"></div>
+  <div id="blackout"></div>
+  <div id="grain"></div>
+
+  <!-- ============ UI CHROME ============ -->
+  <header class="chrome">
+    <div class="brand">
+      <span class="brand-title" data-i18n="brand">BACK TO YOU</span>
+      <span class="brand-sub" data-i18n="brandSub">Plastic in Japan, and in you</span>
+    </div>
+    <nav class="lang" aria-label="Language">
+      <button data-lang="en" class="active">EN</button>
+      <button data-lang="ja">日本語</button>
+      <button data-lang="ko">한국어</button>
+    </nav>
+  </header>
+  <div class="scene-marker mono"><span class="tick"></span><span id="scene-label" data-i18n="scene1">01 — The Catch</span></div>
+
+  <!-- Scene 1: hook -->
+  <button id="catch-cta" aria-label="Catch the fish">
+    <span class="catch-title" data-i18n="catch">Catch me</span>
+    <span class="catch-hint mono" data-i18n="catchHint">Click anywhere to cast</span>
+  </button>
+
+  <aside id="callout" class="card card-hud">
+    <div class="tag mono" data-i18n="callTag">Finding 01 — Sea life</div>
+    <div class="stat">77%</div>
+    <p data-i18n="callText">of anchovies sampled in Tokyo Bay had plastic in their gut, an average of 2.3 pieces per fish.</p>
+    <div class="legend mono"><span class="legend-dot"></span><span data-i18n="callLegend">Each blue fleck = a plastic particle</span></div>
+    <div class="src mono">Tanaka &amp; Takada, 2016 · <em>Scientific Reports</em></div>
+  </aside>
+
+  <div id="scroll-cue" class="mono"><span data-i18n="scroll">Scroll</span><i></i></div>
+
+  <!-- ===== Scene 1b + 2 cards ===== -->
+  <aside class="card card-left" id="c-store">
+    <div class="tag mono" data-i18n="storeTag">Packaging — 01</div>
+    <p class="lead" data-i18n="storeText"></p>
+  </aside>
+  <aside class="card card-left" id="c-tray">
+    <div class="tag mono" data-i18n="trayTag">Packaging — 02</div>
+    <p class="lead" data-i18n="trayText"></p>
+  </aside>
+  <aside class="card card-left" id="c-t1">
+    <div class="tag mono" data-i18n="t1Tag"></div>
+    <h2 data-i18n="t1Title"></h2>
+    <p data-i18n="t1Text"></p>
+    <div class="src mono">Isobe et al., 2015 · <em>Marine Pollution Bulletin</em></div>
+  </aside>
+  <aside class="card card-left" id="c-t2">
+    <div class="tag mono" data-i18n="t2Tag"></div>
+    <h2 class="big" data-i18n="t2Title"></h2>
+    <p data-i18n="t2Text"></p>
+    <div class="src mono">Tsuji et al., 2026 · J-STAGE / PMC</div>
+  </aside>
+  <aside class="card card-left" id="c-t3">
+    <div class="tag mono" data-i18n="t3Tag"></div>
+    <h2 class="big plastic" data-i18n="t3Title"></h2>
+    <p data-i18n="t3Text"></p>
+  </aside>
+  <aside class="card card-left" id="c-t4">
+    <div class="tag mono" data-i18n="t4Tag"></div>
+    <h2 class="big" data-i18n="t4Title"></h2>
+    <p data-i18n="t4Text"></p>
+    <div class="src mono">UNEP, 2018 · PWMI Material Flow 2024</div>
+  </aside>
+  <aside class="card card-left" id="c-t5">
+    <div class="tag mono" data-i18n="t5Tag"></div>
+    <h2 data-i18n="t5Title"></h2>
+    <div class="counter mono"><span class="counter-num" id="ingest-num">0</span><span class="counter-label" data-i18n="t5Counter"></span></div>
+    <div class="src mono" data-i18n="t5Note"></div>
+  </aside>
+  <aside class="card card-center" id="c-t6">
+    <h2 class="big" data-i18n="t6Title"></h2>
+    <p data-i18n="t6Text"></p>
+  </aside>
+
+  <!-- ===== Scene 3: on you ===== -->
+  <aside class="card card-right" id="c-hand">
+    <div class="tag mono" data-i18n="handTag"></div>
+    <h2 data-i18n="handTitle"></h2>
+    <p data-i18n="handText"></p>
+    <div class="src mono">Cox et al., 2019 · <em>Environmental Science &amp; Technology</em></div>
+  </aside>
+  <aside class="card card-bottom" id="c-you">
+    <div class="tag mono" data-i18n="youTag"></div>
+    <h2 data-i18n="youTitle"></h2>
+    <p data-i18n="youText"></p>
+    <div class="src mono">Zhang et al., 2021 · <em>Science of the Total Environment</em></div>
+  </aside>
+  <aside class="card card-bottom" id="c-family">
+    <div class="tag mono" data-i18n="famTag"></div>
+    <h2 data-i18n="famTitle"></h2>
+    <p data-i18n="famText"></p>
+    <div class="src mono">Leslie et al., 2022 · <em>Environment International</em> · Zhang, Wang &amp; Kannan, 2019 · <em>ES&amp;T</em></div>
+  </aside>
+  <aside class="card card-bottom" id="c-friends">
+    <div class="tag mono" data-i18n="friTag"></div>
+    <h2 data-i18n="friTitle"></h2>
+    <p data-i18n="friText"></p>
+    <div class="src mono">Zhang et al., 2021 · <em>Science of the Total Environment</em></div>
+  </aside>
+
+  <!-- ===== Scene 4: plastic everywhere ===== -->
+  <aside class="card card-left" id="c-umb">
+    <div class="tag mono" data-i18n="umbTag"></div>
+    <h2 data-i18n="umbTitle"></h2>
+    <p data-i18n="umbText"></p>
+  </aside>
+  <aside class="card card-left" id="c-cookie">
+    <div class="tag mono" data-i18n="cookTag"></div>
+    <h2 data-i18n="cookTitle"></h2>
+    <p data-i18n="cookText"></p>
+    <div class="src mono">PWMI · Material Flow Chart 2024</div>
+  </aside>
+  <aside class="card card-left" id="c-bag">
+    <div class="tag mono" data-i18n="bagTag"></div>
+    <h2 data-i18n="bagTitle"></h2>
+  </aside>
+
+  <!-- ===== Scene 5: Japan & the world ===== -->
+  <aside class="card card-left" id="c-map1">
+    <div class="tag mono" data-i18n="map1Tag"></div>
+    <h2 data-i18n="map1Title"></h2>
+    <p data-i18n="map1Text"></p>
+    <div class="src mono">Minderoo Plastic Waste Makers Index, 2021 (2019 data) · UNEP, 2018</div>
+  </aside>
+  <aside class="card card-left" id="c-map2">
+    <div class="tag mono" data-i18n="map2Tag"></div>
+    <h2 data-i18n="map2Title"></h2>
+    <p data-i18n="map2Text"></p>
+    <div class="src mono">Minderoo Plastic Waste Makers Index, 2021 (2019 data)</div>
+  </aside>
+
+  <!-- ===== Scene 6: why it matters ===== -->
+  <aside class="card card-center" id="c-why">
+    <h2 class="big" data-i18n="whyTitle"></h2>
+  </aside>
+  <aside class="card card-bottom card-note" id="c-xnote">
+    <p data-i18n="xNote"></p>
+    <div class="src mono">Marfella et al., 2024 · <em>NEJM</em> · Jenner et al., 2022 · Leslie et al., 2022 · Yan et al., 2022 · Nihart et al., 2025 · <em>Nature Medicine</em></div>
+  </aside>
+
+  <!-- ===== Scene 7: so what? ===== -->
+  <aside class="card card-center card-final" id="c-what">
+    <h2 class="big" id="what-title" data-i18n="whatTitle"></h2>
+    <p class="click-hint mono" data-i18n="whatBtn">Click</p>
+  </aside>
+
+  <!-- ===== Scene 8: the big players ===== -->
+  <aside class="card card-left" id="c-pl1">
+    <div class="tag mono" data-i18n="pl1Tag"></div>
+    <h2 data-i18n="pl1Title"></h2>
+    <p data-i18n="pl1Text"></p>
+    <div class="src mono">Greenpeace East Asia, 2024 · petrochemical capacity database</div>
+  </aside>
+  <aside class="card card-right" id="c-pl2">
+    <div class="tag mono" data-i18n="pl2Tag"></div>
+    <h2 data-i18n="pl2Title"></h2>
+    <p data-i18n="pl2Text"></p>
+    <div class="src mono">PWMI Material Flow 2024 · Down To Earth, 2024</div>
+  </aside>
+  <aside class="card card-bottom" id="c-pl3">
+    <div class="tag mono" data-i18n="pl3Tag"></div>
+    <h2 data-i18n="pl3Title"></h2>
+    <p data-i18n="pl3Text"></p>
+    <div class="src mono">Resource Circulation Strategy for Plastics, 2019 · The Diplomat, 2023 · Eco-Business, 2024</div>
+  </aside>
+  <aside class="card card-center" id="c-small">
+    <h2 class="big" data-i18n="smallTitle"></h2>
+    <p class="lead" data-i18n="smallText"></p>
+  </aside>
+
+  <!-- ===== Scene 9: small switches ===== -->
+  <aside class="card card-left" id="c-reuse1">
+    <div class="tag mono" data-i18n="re1Tag"></div>
+    <h2 data-i18n="re1Title"></h2>
+    <ul class="ideas" data-i18n-html="re1List"></ul>
+  </aside>
+  <aside class="card card-right" id="c-reuse2">
+    <div class="tag mono" data-i18n="re2Tag"></div>
+    <h2 class="big" data-i18n="re2Title"></h2>
+    <p data-i18n="re2Text"></p>
+    <div class="src mono">Ministry of the Environment, Japan · effects of the plastic bag fee</div>
+  </aside>
+
+  <!-- ===== Scene 10: together ===== -->
+  <aside class="card card-center" id="c-crowd1">
+    <h2 class="big" data-i18n="cr1Title"></h2>
+  </aside>
+  <aside class="card card-right" id="c-crowd2">
+    <h2 data-i18n="cr2Title"></h2>
+    <p data-i18n="cr2Text"></p>
+    <div class="src mono">Ministry of the Environment, Japan · effects of the plastic bag fee</div>
+  </aside>
+
+  <!-- ===== Final ===== -->
+  <section id="final">
+    <div class="final-col final-links">
+      <div class="tag mono" data-i18n="finLinks">Useful links</div>
+      <ul>
+        <li><a href="https://plastics-smart.env.go.jp/" target="_blank" rel="noopener">Plastics Smart</a><span data-i18n="finL1">Ministry of the Environment, Japan</span></li>
+        <li><a href="https://www.mymizu.co/" target="_blank" rel="noopener">mymizu</a><span data-i18n="finL2">Free water refill spots across Japan</span></li>
+        <li><a href="https://www.env.go.jp/content/000050376.pdf" target="_blank" rel="noopener">レジ袋有料化の効果</a><span data-i18n="finL3">What the 2020 bag fee changed</span></li>
+        <li><a href="https://www.unep.org/plastic-pollution" target="_blank" rel="noopener">UNEP · Plastic pollution</a><span data-i18n="finL4">The global picture</span></li>
+        <li><a href="https://www.breakfreefromplastic.org/" target="_blank" rel="noopener">Break Free From Plastic</a><span data-i18n="finL5">The movement pushing companies to make less</span></li>
+        <li><a href="https://www.plasticfreejuly.org/" target="_blank" rel="noopener">Plastic Free July</a><span data-i18n="finL6">A one-month challenge to start with</span></li>
+      </ul>
+    </div>
+    <div class="final-col final-title">
+      <h1 data-i18n="finTitle">So, will you be the change for a better future?</h1>
+      <p class="mono" data-i18n="finSub"></p>
+      <button id="restart-btn" class="mono" data-i18n="finRestart">Start again</button>
+    </div>
+    <div class="final-col final-refs">
+      <div class="tag mono" data-i18n="finRefs">References</div>
+      <ol id="ref-list" data-lenis-prevent></ol>
+    </div>
+  </section>
+
+  <!-- ============ SCROLL TRACK ============ -->
+  <main id="track">
+    <section id="s-intro"></section>
+    <section id="s-store"></section>
+    <section id="s-table"></section>
+    <section id="s-eat"></section>
+    <section id="s-hand"></section>
+    <section id="s-people"></section>
+    <section id="s-market"></section>
+    <section id="s-map"></section>
+    <section id="s-why"></section>
+    <section id="s-what"></section>
+    <!-- unlocked by clicking through "So what can I do?" -->
+    <section id="s-players" class="locked"></section>
+    <section id="s-reuse" class="locked"></section>
+    <section id="s-crowd" class="locked"></section>
+    <section id="s-final" class="locked"></section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
