@@ -179,6 +179,42 @@ body.can-catch { cursor: crosshair; }
 #scroll-cue i { width: 1px; height: 46px; background: linear-gradient(var(--plastic-glow), transparent); animation: cue 1.8s ease-in-out infinite; transform-origin: top; }
 @keyframes cue { 0% { transform: scaleY(0); } 50% { transform: scaleY(1); } 100% { transform: scaleY(1); opacity: 0; } }
 
+/* ---------- "keep scrolling" (shows when the reader pauses) ---------- */
+#keep-scroll {
+  position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 7;
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--ice);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  text-shadow: 0 0 10px rgba(0, 0, 0, .8);
+}
+#keep-scroll i { width: 1px; height: 30px; background: linear-gradient(var(--plastic-glow), transparent); animation: cue 1.8s ease-in-out infinite; transform-origin: top; }
+
+/* ---------- vertical progress bar (left edge) ---------- */
+#progress {
+  position: fixed; left: 28px; top: 50%; height: 44vh; width: 14px; z-index: 10;
+  transform: translateY(-50%); pointer-events: none; opacity: 0; visibility: hidden;
+}
+#progress .track { position: absolute; left: 6px; top: 0; bottom: 0; width: 1px; background: rgba(227, 242, 250, .16); }
+#progress .fill {
+  position: absolute; left: 6px; top: 0; width: 1px; height: 100%;
+  background: var(--plastic-glow); box-shadow: 0 0 6px rgba(63, 211, 232, .7);
+  transform-origin: top; transform: scaleY(0);
+}
+#progress .tick { position: absolute; left: 3px; width: 7px; height: 1px; background: rgba(227, 242, 250, .3); transition: background .3s; }
+#progress .tick.done { background: var(--plastic-glow); }
+#progress .dot {
+  position: absolute; left: 3px; top: 0; width: 8px; height: 6px; margin-top: -3px;
+  background: var(--plastic-glow); box-shadow: 0 0 10px 2px rgba(63, 211, 232, .7);
+  transform: rotate(-24deg); /* a little plastic fleck */
+}
+
+/* ---------- final-page credits ---------- */
+.final-credits {
+  position: absolute; right: max(28px, 5vw); bottom: 26px;
+  font-size: 11px; letter-spacing: .08em; color: var(--grey); text-align: right;
+}
+.final-credits span { color: var(--plastic-glow); text-transform: uppercase; letter-spacing: .18em; margin-right: 6px; }
+
 /* ---------- HUD (svg, px space) ---------- */
 #hud text { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .08em; fill: var(--ice); }
 #hud text.tag-title { font-size: 12px; font-weight: 500; letter-spacing: .14em; fill: var(--plastic-glow); }
@@ -254,6 +290,8 @@ body.gate { cursor: pointer; }
   .brand-sub { display: none; }
   .chrome { padding: 16px; }
   .scene-marker { left: 16px; bottom: 18px; }
+  #progress { left: 6px; height: 34vh; }
+  .final-credits { position: static; text-align: center; margin-top: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   #grain, .catch-title, #scroll-cue i { animation: none; }

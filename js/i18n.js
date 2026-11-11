@@ -391,6 +391,10 @@ Object.assign(STRINGS.ko, {
   finRestart: '처음부터 다시',
 });
 
+Object.assign(STRINGS.en, { keepScroll: 'Keep scrolling', finMadeBy: 'Made by' });
+Object.assign(STRINGS.ja, { keepScroll: 'スクロールして続ける', finMadeBy: '制作' });
+Object.assign(STRINGS.ko, { keepScroll: '계속 스크롤하세요', finMadeBy: '제작' });
+
 let current = 'en';
 export const t = (key) => STRINGS[current][key] ?? STRINGS.en[key] ?? key;
 

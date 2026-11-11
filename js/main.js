@@ -417,6 +417,9 @@ function unlockScroll() {
   toTop();
   lenis.start();
   buildScrollTimelines();
+  layoutProgress();
+  showProgress(true); // the bar appears once you're allowed to scroll
+  armKeepScrolling();
 }
 
 /* ---------- "So what can I do?" — click to break free (4 clicks) ---------- */
@@ -442,6 +445,7 @@ function unlockFinale() {
   buildStory3();
   ScrollTrigger.refresh();
   lenis.resize(); // the page just got longer
+  layoutProgress();
   lenis.scrollTo(ST.players.start + innerHeight * 1.6, { duration: 2.6, easing: (x) => 1 - Math.pow(1 - x, 3) });
 }
 $('#restart-btn').addEventListener('click', (e) => { e.stopPropagation(); window.scrollTo(0, 0); location.reload(); });
@@ -479,8 +483,28 @@ const scrubTL = (trigger) => gsap.timeline({
   defaults: { ease: 'none', immediateRender: false },
   scrollTrigger: { trigger, start: 'top top', end: 'bottom top', scrub: true },
 });
-const cardIn = (tl, sel, at, d = .6) => tl.fromTo(sel, { autoAlpha: 0, y: 40 }, { autoAlpha: 1, y: 0, duration: d, ease: 'power2.out' }, at);
-const cardOut = (tl, sel, at, d = .5) => tl.fromTo(sel, { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -40, duration: d, ease: 'power2.in' }, at);
+// Text cards are NOT scrubbed: the scroll position only decides whether a card should be on screen,
+// and the card then plays its whole fade on its own clock. So one small scroll never leaves a card
+// half-visible, and fast scrolling never rushes it (a card that's no longer needed just fades away).
+// A card is shown once any of its "in" points has been passed and none of its "out" points has.
+const CARDS = new Map();
+const cardRec = (sel) => { if (!CARDS.has(sel)) CARDS.set(sel, { ins: [], outs: [], shown: false }); return CARDS.get(sel); };
+const cardIn = (tl, sel, at) => { cardRec(sel).ins.push([tl, at]); return tl; };
+const cardOut = (tl, sel, at) => { cardRec(sel).outs.push([tl, at]); return tl; };
+const passed = ([tl, at]) => (at === 0 ? tl.time() > 0.001 : tl.time() >= at); // "at 0" means: once that section has started
+function updateCards() {
+  for (const [sel, c] of CARDS) {
+    const on = c.ins.some(passed) && !c.outs.some(passed);
+    if (on === c.shown) continue;
+    c.shown = on;
+    if (on) {
+      if (gsap.getProperty(sel, 'opacity') < 0.05) gsap.set(sel, { y: 30 });
+      gsap.to(sel, { autoAlpha: 1, y: 0, duration: 0.55, ease: 'power2.out', overwrite: 'auto' });
+    } else {
+      gsap.to(sel, { autoAlpha: 0, y: -24, duration: 0.35, ease: 'power2.in', overwrite: 'auto' });
+    }
+  }
+}
 const fromTo = (tl, obj, from, to, at, dur = 1, ease = 'none') => tl.fromTo(obj, { ...from }, { ...to, duration: dur, ease }, at);
 
 let stStore, stTable, stEat, eatSnaps = [];
@@ -727,8 +751,8 @@ function buildStory3() {
   const b = scrubTL('#s-players');
   ST.players = b.scrollTrigger;
   const PLAY = { theta: Math.PI * 3, r: 16.5, h: 2.4, lx: 0, ly: 1.4, lz: 10 }; // far back: you look small
-  b.fromTo('#c-what', { autoAlpha: 1 }, { autoAlpha: 0, duration: .4 }, 0)
-    .fromTo(A, { ...SHRUG }, { ...REST, duration: 1, ease: 'power2.inOut' }, .2)
+  cardOut(b, '#c-what', 0);
+  b.fromTo(A, { ...SHRUG }, { ...REST, duration: 1, ease: 'power2.inOut' }, .2)
     .fromTo(C, { ...WIDEF }, { ...PLAY, duration: 2, ease: 'power2.inOut' }, .3)
     .fromTo(TA, { players: 0 }, { players: 1, duration: .3 }, 2.4)
     .fromTo(PS, { factory: 0 }, { factory: 1, duration: 1.2, ease: 'power2.out' }, 2.6);
@@ -786,8 +810,96 @@ function buildStory3() {
 
 /* ---------- bite snapping (directional, Lenis-driven) ---------- */
 let snapTimer = 0, snapping = false;
+/* ---------- reading progress (left edge) + "keep scrolling" nudge ---------- */
+// The last four sections stay hidden until the click gate, but the bar should measure
+// the whole story from the start, so their heights (vh, from style.css) are counted in.
+const LOCKED_VH = { 's-players': 760, 's-reuse': 520, 's-crowd': 470, 's-final': 220 };
+const PROG = { starts: [], total: 1, ticks: [] };
+function layoutProgress() {
+  let y = 0;
+  PROG.starts = [];
+  document.querySelectorAll('#track section').forEach((sec) => {
+    const h = sec.classList.contains('locked') ? LOCKED_VH[sec.id] / 100 * innerHeight : sec.offsetHeight;
+    if (h > 0) PROG.starts.push({ id: sec.id, y, locked: sec.classList.contains('locked') });
+    y += h;
+  });
+  PROG.total = Math.max(1, y - innerHeight);
+  // one small tick per section (skipping the very first)
+  const bar = $('#progress');
+  PROG.ticks.forEach((t) => t.remove());
+  PROG.ticks = PROG.starts.slice(1).map((s) => {
+    const t = document.createElement('div'); t.className = 'tick';
+    t.style.top = `${(s.y / PROG.total) * 100}%`; t.dataset.y = s.y;
+    bar.appendChild(t);
+    return t;
+  });
+  updateProgress();
+}
+const progFill = $('#progress .fill'), progDot = $('#progress .dot');
+function updateProgress() {
+  const p = Math.min(1, Math.max(0, scrollY / PROG.total));
+  progFill.style.transform = `scaleY(${p.toFixed(4)})`;
+  progDot.style.top = `${(p * 100).toFixed(2)}%`;
+  PROG.ticks.forEach((t) => t.classList.toggle('done', scrollY >= +t.dataset.y - 2));
+}
+let progShown = false;
+function showProgress(v) {
+  if (v === progShown) return;
+  progShown = v;
+  gsap.to('#progress', { autoAlpha: v ? 1 : 0, duration: .6 });
+}
+
+const KEEP_IDLE_MS = 5000; // show the nudge after 5 s without scrolling
+const keepEl = $('#keep-scroll');
+let idleTimer = 0, keepShown = false;
+
+// Bottom-centre by default; if a text card is in the way, sit just above that card instead.
+function placeKeep() {
+  keepEl.style.bottom = '12px';
+  const W = 200, H = 54, gap = 14;
+  const cue = { left: innerWidth / 2 - W / 2, right: innerWidth / 2 + W / 2, top: innerHeight - 12 - H, bottom: innerHeight - 12 };
+  let lift = 0;
+  for (const [sel, c] of CARDS) {
+    if (!c.shown) continue;
+    const r = $(sel).getBoundingClientRect();
+    const overlaps = r.left < cue.right && r.right > cue.left && r.top < cue.bottom && r.bottom > cue.top;
+    if (overlaps) lift = Math.max(lift, innerHeight - r.top + gap); // just above the card's top edge
+  }
+  if (lift) keepEl.style.bottom = `${Math.round(lift)}px`;
+}
+function showKeep(v) {
+  if (v === keepShown) return;
+  keepShown = v;
+  if (v) placeKeep();
+  gsap.to(keepEl, { autoAlpha: v ? 1 : 0, duration: v ? .6 : .25 });
+}
+// Places where "keep scrolling" must never show
+function keepBlocked() {
+  if (mode !== 'caught') return true;
+  const atStart = stStore && stStore.progress < 0.02;                         // the first "Scroll" cue is already there
+  const atGate = !unlocked2 && ST.what && ST.what.progress > 0.4;             // "So what can I do?" wants clicks, not scrolling
+  const atEnd = ST.final && ST.final.progress > 0.15;                         // final page
+  return !!(atStart || atGate || atEnd);
+}
+function armKeepScrolling() {
+  clearTimeout(idleTimer);
+  showKeep(false);
+  idleTimer = setTimeout(() => {
+    if (snapping) return armKeepScrolling(); // still settling on a bite; try again
+    if (!keepBlocked()) showKeep(true);
+  }, KEEP_IDLE_MS);
+}
+// Any attempt to move on hides the cue — even where the page can't actually scroll any further
+['wheel', 'touchstart', 'touchmove', 'keydown', 'pointerdown'].forEach((ev) =>
+  window.addEventListener(ev, () => { if (mode === 'caught') armKeepScrolling(); }, { passive: true }));
+
 lenis.on('scroll', () => {
   updateMarker();
+  updateProgress();
+  if (mode === 'caught') {
+    armKeepScrolling();
+    showProgress(!(ST.final && ST.final.progress > 0.3));
+  }
   if (snapping || !stEat) return;
   clearTimeout(snapTimer);
   snapTimer = setTimeout(trySnap, 140);
@@ -840,6 +952,7 @@ function resize() {
   hud.setAttribute('viewBox', `0 0 ${stage.vw} ${stage.vh}`);
 }
 window.addEventListener('resize', resize);
+window.addEventListener('resize', () => { if (mode === 'caught') layoutProgress(); });
 resize();
 
 const clock = new THREE.Clock();
@@ -973,6 +1086,8 @@ gsap.ticker.add(() => {
   renderer.render(scene, camera);
   updateHud();
   updateBoard();
+  updateCards();
+  if (keepShown && keepBlocked()) showKeep(false); // never linger on the click screen, the start or the end
 
   if (S.eaten > 0 || lastCount > 0) {
     const n = fish.ingestedCount();

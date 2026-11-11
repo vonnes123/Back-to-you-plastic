@@ -70,6 +70,10 @@
   </aside>
 
   <div id="scroll-cue" class="mono"><span data-i18n="scroll">Scroll</span><i></i></div>
+  <!-- appears whenever the reader pauses, so the story never feels finished too early -->
+  <div id="keep-scroll" class="mono"><span data-i18n="keepScroll">Keep scrolling</span><i></i></div>
+  <!-- vertical reading progress (left edge) -->
+  <div id="progress" aria-hidden="true"><div class="track"></div><div class="fill"></div><div class="dot"></div></div>
 
   <!-- ===== Scene 1b + 2 cards ===== -->
   <aside class="card card-left" id="c-store">
@@ -255,6 +259,7 @@
       <div class="tag mono" data-i18n="finRefs">References</div>
       <ol id="ref-list" data-lenis-prevent></ol>
     </div>
+    <div class="final-credits mono"><span data-i18n="finMadeBy">Made by</span> Vasil Todorov, Clovis Reignard--Labbas, Juhana Antila</div>
   </section>
 
   <!-- ============ SCROLL TRACK ============ -->
